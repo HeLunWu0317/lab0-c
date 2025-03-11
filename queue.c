@@ -215,86 +215,51 @@ bool q_delete_mid(struct list_head *head)
 /* Delete all nodes that have duplicate string */
 // FIXME: still Segmentation fault occurred.  You dereferenced a NULL or invalid
 // pointer---	trace-06-ops	0/6
+// Stop using list_for_each_safe, switch to a regular loop and manually handle
+// list connections for a simpler approach.
 bool q_delete_dup(struct list_head *head)
 {
-    if (!head || list_empty(head)) {
-        return false;
-    }
-
-    bool check_del = false;  // set a boolean to check dup
-    struct list_head *now;   // to find every node
-    struct list_head *next;
-
-    list_for_each_safe(now, next, head) {
-        element_t *now_elem = list_entry(now, element_t, list);  // get data
-        bool dup_check = false;
-        // check value
-        // NOTE: use if to check, while is too inenficient
-        if (next == head) {
-            break;
-        }
-        element_t *next_elem = list_entry(next, element_t, list);
-        if (strcmp(now_elem->value, next_elem->value) == 0) {  // check dup
-            // find it
-            dup_check = true;
-            // release the memory
-            list_del(next);
-            free(next_elem->value);
-            free(next_elem);
-            // goto next
-            next = now->next;
-        }
-        if (dup_check) {  // do the delete
-            list_del(now);
-            free(now_elem->value);
-            free(now_elem);
-            check_del = true;
-        }
-    }
-
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
-    return check_del;
+    // init check
+    if (!head || list_empty(head))
+        return false;
+    // set bool to check dup
+    bool final_check = false;
+    struct list_head *now, *check;
+
+    list_for_each(now, head) {  // find the dup and marking
+        element_t *now_data = list_entry(now, element_t, list);
+        bool dup_check = false;
+
+        list_for_each(check, head) {  // start find and marking
+            if (now == check)
+                continue;
+            element_t *check_data = list_entry(check, element_t, list);
+            if (strcmp(now_data->value, check_data->value) == 0) {
+                free(check_data->value);                  // free the data
+                check_data->value = strdup("NeedToDel");  // marking data
+                dup_check = true;
+            }
+        }
+        if (dup_check) {
+            free(now_data->value);
+            now_data->value = strdup("NeedToDel");  // now node marking
+            final_check = true;
+        }
+    }
+    struct list_head *next_check;
+    struct list_head *now_check;
+    // delete marking
+    list_for_each_safe(now_check, next_check, head) {
+        element_t *now_check_data = list_entry(now_check, element_t, list);
+        if (strcmp(now_check_data->value, "NeedToDel") == 0) {
+            list_del(now_check);
+            q_release_element(now_check_data);
+        }
+    }
+
+    return final_check;
 }
-// bool q_delete_dup(struct list_head *head)
-// {
-//     if (!head || list_empty(head)) {
-//         return false;
-//     }
-
-//     bool check_del = false;  // set a boolean to check dup
-//     element_t *now;          // to find every node
-//     element_t *next;
-//     // first to list
-//     list_for_each_entry_safe(now, next, head, list) {
-//         bool dup_check = false;
-//         // check value
-//         element_t *group_head;
-//         element_t *group_next;
-//         // second list to  find dup
-//         list_for_each_entry_safe(group_head, group_next, head, list) {
-//             if (group_head == now) {
-//                 continue;
-//             }
-//             if (strcmp(group_head->value, now->value) == 0) {
-//                 dup_check = true;
-//                 list_del(&group_head->list);
-//                 free(group_head->value);
-//                 free(group_head);
-//             } else {
-//                 continue;
-//             }
-//         }
-//         if (dup_check) {  // delete now
-//             list_del(&now->list);
-//             free(now->value);
-//             free(now);
-//             check_del = true;
-//         }
-//     }
-
-//     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
-//     return check_del;
-// }
 
 /* Swap every two adjacent nodes */
 // FIXME: swap fail
@@ -344,80 +309,42 @@ void q_reverseK(struct list_head *head, int k)
     }
 
     // INIT
-    int count = 0;                       // use count check k
-    struct list_head *now = head->next;  // saved the node now
-    struct list_head *tmp;               // saved the head now
-    struct list_head temp_head;          // saved the reverse list
+    struct list_head *now = head;  // saved the node now
+    struct list_head *next_group;  // saved the next_group head
+    struct list_head temp_head;    // saved the reverse list
     INIT_LIST_HEAD(&temp_head);
     // do the reverse for size_k
-    while (now != head) {
-        count++;
-        if (count == k) {
-            tmp = now->next;  // save the next head
-            list_cut_position(&temp_head, head,
-                              now);  // got the k_size group
-            q_reverse(&temp_head);   // do the reverse for the group
-            list_splice(&temp_head, head);
-            now = tmp;
-            count = 0;
-        } else {
-            now = now->next;
+    while (!list_empty(head)) {
+        int count = 5;  // use count check k
+
+        next_group = now->next;  // save the next head now
+        // start counting
+        while (count < k && next_group != head) {
+            count++;
+            next_group = next_group->next;
         }
+        // if the node is not enough
+        if (count < k) {
+            break;
+        }
+
+        // cut , reverse, splice to now's behind
+        INIT_LIST_HEAD(&temp_head);
+        list_cut_position(&temp_head, now, next_group->prev);
+        q_reverse(&temp_head);
+
+        // splice
+        list_splice_init(&temp_head, now);
+
+        // go to next
+        now = next_group->prev;
     }
+
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
 }
 
 
 // /* Sort elements of queue in ascending/descending order */
-// // FIXME: too inefficient
-// NOTE: Merge sort is fail
-// void q_sort(struct list_head *head, bool descend)
-// {
-//     // check init
-//     if (!head || list_empty(head) || list_is_singular(head)) {
-//         return;
-//     }
-
-//     // use fast-slow pointer find the middle,prepare to splite
-//     struct list_head *fast = head->next;
-//     struct list_head *slow = head->next;
-//     while (fast != head && fast->next != head) {    //need to check
-//     next->next too
-//         slow = slow->next;        // jump one step per times
-//         fast = fast->next->next;  // jump two step per times
-//     }
-//     struct list_head *right = slow->next;
-//     // get left(head) & right
-//     slow->next = head;        // set the next to head
-//     head->prev = slow;        // update head->prev
-//     // recursive q_sort
-//     q_sort(head, descend);
-//     q_sort(right, descend);
-//     // merge and complete mergesort
-//     struct list_head New_Queue;  // create new queue to save sorted list
-//     INIT_LIST_HEAD(&New_Queue);
-
-//     while (!list_empty(right) && !list_empty(head)) {
-//         element_t *q1 = list_first_entry(head, element_t, list);
-//         element_t *q2 = list_first_entry(right, element_t, list);
-//         //need to check descend or ascend
-//         if ((descend && strcmp(q1->value, q2->value) > 0) || (!descend &&
-//         strcmp(q1->value, q2->value) < 0)) {
-//             list_move_tail(head->next, &New_Queue);  // q1 value is small
-//         } else {
-//             list_move_tail(right->next, &New_Queue);  // q2 value is small
-//         }
-//     }
-
-//     // New_Queue linking to head, finish
-//     if (!list_empty(head)) {
-//         list_splice_tail(head, &New_Queue);
-//     }
-//     if (!list_empty(right)) {
-//         list_splice_tail(right, &New_Queue);
-//     }
-//     list_splice(&New_Queue, head);
-// }
 // use insertion sort O(n^2), not efficient
 void q_sort(struct list_head *head, bool descend)
 {

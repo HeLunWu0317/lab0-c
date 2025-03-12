@@ -315,7 +315,7 @@ void q_reverseK(struct list_head *head, int k)
     INIT_LIST_HEAD(&temp_head);
     // do the reverse for size_k
     while (!list_empty(head)) {
-        int count = 5;  // use count check k
+        int count = 0;  // use count check k
 
         next_group = now->next;  // save the next head now
         // start counting

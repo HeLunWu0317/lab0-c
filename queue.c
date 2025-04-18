@@ -499,3 +499,35 @@ int q_merge(struct list_head *head, bool descend)
     // https://leetcode.com/problems/merge-k-sorted-lists/
     return q_size(first_queue);
 }
+element_t *get_element_at(struct list_head *head, int index)
+{
+    struct list_head *node;
+    int i = 0;
+    list_for_each(node, head) {
+        if (i == index)
+            return list_entry(node, element_t, list);
+        i++;
+    }
+    return NULL;
+}
+void q_shuffle(struct list_head *head)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+    //
+    int len = q_size(head);
+    for (int i = len - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+
+        element_t *ei = get_element_at(head, i);
+        element_t *ej = get_element_at(head, j);
+
+        if (ei && ej) {
+            char *tmp = ei->value;
+            ei->value = ej->value;
+            ej->value = tmp;
+        }
+    }
+
+    return;
+}

@@ -23,6 +23,8 @@
 #include "list.h"
 #include "random.h"
 
+
+
 /* Shannon entropy */
 extern double shannon_entropy(const uint8_t *input_data);
 extern int show_entropy;
@@ -46,6 +48,9 @@ extern int show_entropy;
 
 #include "console.h"
 #include "report.h"
+
+void q_shuffle(struct list_head *head);
+
 
 /* Settable parameters */
 
@@ -1055,6 +1060,20 @@ static bool do_next(int argc, char *argv[])
 
     return q_show(0);
 }
+static bool do_shuffle(int argc, char *argv[])
+{
+    if (argc != 1) {
+        report(1, "%s takes no arguments", argv[0]);
+        return false;
+    }
+
+    if (!current || !current->q) {
+        report(3, "Warning: Calling merge on null queue");
+        return false;
+    }
+    q_shuffle(current->q);
+    return q_show(0);
+}
 
 static void console_init()
 {
@@ -1096,6 +1115,8 @@ static void console_init()
                 "");
     ADD_COMMAND(reverseK, "Reverse the nodes of the queue 'K' at a time",
                 "[K]");
+    ADD_COMMAND(shuffle, "Shuffle elements in queue using Fisher–Yates", "");
+
     add_param("length", &string_length, "Maximum length of displayed string",
               NULL);
     add_param("malloc", &fail_probability, "Malloc failure probability percent",

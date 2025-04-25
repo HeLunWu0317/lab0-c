@@ -1391,6 +1391,8 @@ uintptr_t os_random(uintptr_t seed)
 #define BUFSIZE 256
 int main(int argc, char *argv[])
 {
+    srand(time(NULL));
+
     /* sanity check for git hook integration */
     if (!sanity_check())
         return -1;
